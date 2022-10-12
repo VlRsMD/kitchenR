@@ -85,4 +85,4 @@ if __name__ == '__main__':
     for waiter in waiters:
         waiter.start()
     ## run kitchen server
-    K_App.run(host='localhost', port=3501)
+    K_App.run(host='127.0.0.1', port=3501)
