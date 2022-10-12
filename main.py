@@ -1,4 +1,3 @@
-import flask
 import time
 import threading
 import requests
@@ -7,8 +6,19 @@ import cooks
 import menu
 import order_in
 import order_out
+from wsgiref.simple_server import make_server
 
-K_App = flask.Flask(__name__)
+def K_App(environment, response):
+    status = '200 OK'
+    headers = [('content-type', 'text/html; charset=utf-8')]
+    response(status, headers)
+    return [b'<h2>Kitchen server</h2>']
+
+
+with make_server('', 3501, K_App) as server:
+    print('serving on port 3501...\nvisit http://127.0.0.1:3501\nTo exit press ctrl + c')
+    server.serve_forever()
+
 q = []
 st = []
 
@@ -19,10 +29,10 @@ def get_order():
     global q
     mutex = threading.Lock()
     ## do while dinning hall is generating order requests
-    while requests.get("http://localhost:3501/put") != {"state": "no more incoming orders"}:
+    while requests.get("http://127.0.0.1:3501/put") != {"state": "no more incoming orders"}:
         ## lock
         mutex.acquire()
-        resp = requests.get("http://localhost:3501/put")
+        resp = requests.get("http://127.0.0.1:3501/put")
         received_order = json.loads(resp, object_hook=order_in.orderIn)
         ## add received order to queue
         q.append(received_order)
@@ -61,11 +71,11 @@ def send_order():
         mutex.acquire()
         pick_up_cooked_order = st.pop()
         order_to_json = json.dumps(pick_up_cooked_order.__dict__)
-        requests.put("http://localhost:3500/put", json=order_to_json)
+        requests.put("http://127.0.0.1:3500/put", json=order_to_json)
         ## unlock
         mutex.release()
     if len(st) == 0:
-        requests.put("http://localhost:3500/put", json={"state": "all orders have been cooked"})
+        requests.put("http://127.0.0.1:3500/put", json={"state": "all orders have been cooked"})
 
 ## multiple waiters threads
 waiters = [threading.Thread(target=send_order) for i in range(4)]
